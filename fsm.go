@@ -9,12 +9,8 @@ import (
 
 type Machine struct {
 	InitialState string
-	States       map[string]*State
+	States       map[string][]Transition
 	Logger       *log.Logger
-}
-
-type State struct {
-	Transitions []Transition
 }
 
 type Transition struct {
@@ -23,6 +19,16 @@ type Transition struct {
 }
 
 type TransitionTest func([]byte) (int, error)
+
+type Error struct {
+	State           string
+	TransitionIndex int
+	Err             error
+}
+
+func (e *Error) Error() string {
+	return e.Err.Error()
+}
 
 var ErrNoInitalState = errors.New("no inital state defined")
 var ErrInfiniteLoop = errors.New("infinite loop detected")
@@ -49,20 +55,28 @@ func (m *Machine) Parse(b []byte) (pos int, err error) {
 RunState:
 	counter++
 	if counter > 50000 {
-		m.Logger.Println(ErrInfiniteLoop.Error())
+		err = &Error{
+			State:           state,
+			TransitionIndex: -1,
+			Err:             ErrInfiniteLoop,
+		}
 		return 0, ErrInfiniteLoop
 	}
 
 	m.Logger.Printf("entered state '%s' at position %d", state, pos)
 
-	if len(s.Transitions) == 0 {
-		err = fmt.Errorf("state '%s' has no transitions!", state)
+	if len(s) == 0 {
+		err = &Error{
+			State:           state,
+			TransitionIndex: -1,
+			Err:             fmt.Errorf("state '%s' has no transitions!", state),
+		}
 		return
 	}
 
 	var n int
 	// Try each transition test, and if fails move onto next
-	for i, t := range s.Transitions {
+	for i, t := range s {
 		n, err = t.Test(b[pos:])
 		if err != nil {
 			m.Logger.Printf(" - test %d error: %s", i, err)

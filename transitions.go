@@ -1,11 +1,8 @@
 package fsm
 
 import (
-	"bytes"
-	"encoding/binary"
-	"errors"
+	"fmt"
 	"io"
-	"regexp"
 )
 
 // Skip ignores 1 or more bytes
@@ -27,40 +24,14 @@ func Byte(match byte) TransitionTest {
 		if b[0] == match {
 			return 1, nil
 		}
-		return 0, errors.New("no null terminator")
+		return 0, fmt.Errorf("looking for 0x%X got 0x%X", match, b[0])
 	}
 }
 
-// RegexSubmatch matches a given regexp using FindSubmatch()
-func RegexSubmatch(reg *regexp.Regexp, result *[][]byte) TransitionTest {
-	return func(b []byte) (int, error) {
-		r := reg.FindSubmatch(b)
-		if r != nil {
-			*result = r
-			return len(r[0]), nil
-		}
-		return 0, errors.New("no match")
-	}
+func STX() TransitionTest {
+	return Byte(0x02)
 }
 
-// StringNullTerminated return a string of all bytes up to the first 0x00 / null byte
-func StringNullTerminated(s *string) TransitionTest {
-	return func(b []byte) (int, error) {
-		p := bytes.IndexByte(b, 0x00)
-		if p > -1 {
-			*s = string(b[:p])
-			return p + 1, nil
-		}
-		return 0, errors.New("No null in data")
-	}
-}
-
-func Int16(v *int16) TransitionTest {
-	return func(b []byte) (int, error) {
-		if len(b) < 2 {
-			return 0, io.EOF
-		}
-		*v = int16(binary.BigEndian.Uint16(b))
-		return 2, nil
-	}
+func ETX() TransitionTest {
+	return Byte(0x03)
 }
