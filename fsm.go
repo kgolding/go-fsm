@@ -97,5 +97,5 @@ RunState:
 		return 0, fmt.Errorf("no such state '%s'", state)
 	}
 
-	return 0, fmt.Errorf("state '%s': no matching transitions", state)
+	return // 0, fmt.Errorf("state '%s': no matching transitions", state)
 }

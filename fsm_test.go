@@ -48,6 +48,45 @@ func TestDecodeSimple(t *testing.T) {
 	}
 }
 
+func TestDecodeSimple2(t *testing.T) {
+	var text string
+
+	const (
+		Start       = "Start"
+		OneTwoThree = "OneTwoThree"
+		Text        = "Text"
+	)
+
+	machine := Machine{
+		InitialState: Start,
+		States: map[string][]Transition{
+			Start: []Transition{
+				{STX(), OneTwoThree},
+				{Skip(1), Start},
+			},
+			OneTwoThree: []Transition{
+				{Bytes([]byte{0x1, 0x2, 0x3}), Text},
+			},
+			Text: []Transition{
+				{StringNullTerminated(&text), ""},
+			},
+		},
+	}
+
+	machine.Logger = logger
+
+	n, err := machine.Parse([]byte{0x2, 0x1, 0x2, 0x3, 'H', 'e', 'l', 'l', 'o', 0x0})
+	if err != nil {
+		t.Error(err)
+	}
+	if text != "Hello" {
+		t.Errorf("Expected ' Hello', got '%s'", text)
+	}
+	if n != 10 {
+		t.Errorf("Expected 10, got %d", n)
+	}
+}
+
 func TestDecode1(t *testing.T) {
 	var text string
 	var dateMatch [][]byte
