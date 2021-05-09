@@ -5,7 +5,7 @@ import (
 	"io"
 )
 
-// Uint read 1 or more bytes as an Integer
+// Uint reads 1 or more bytes as an unsigned integer
 func Uint(v *uint, byteCount int) TransitionTest {
 	return func(b []byte) (int, error) {
 		if len(b) < byteCount {

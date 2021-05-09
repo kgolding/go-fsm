@@ -16,6 +16,13 @@ func Skip(n int) TransitionTest {
 	}
 }
 
+// Else always changes to the given state
+func Else() TransitionTest {
+	return func(b []byte) (int, error) {
+		return 0, nil
+	}
+}
+
 // Byte matches a single given byte
 func Byte(match byte) TransitionTest {
 	return func(b []byte) (int, error) {

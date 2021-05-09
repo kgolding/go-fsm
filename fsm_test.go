@@ -5,6 +5,7 @@ import (
 	"os"
 	"regexp"
 	"testing"
+	"time"
 )
 
 var logger = log.New(os.Stdout, "FSM ", log.Lmsgprefix)
@@ -155,7 +156,7 @@ func TestDecodeVariableLenString(t *testing.T) {
 				{Uint(&textLen, 2), Text},
 			},
 			Text: []Transition{
-				{StringLen(&textLen, &text), ""},
+				{StringFixedLen(&textLen, &text), ""},
 			},
 		},
 	}
@@ -171,5 +172,36 @@ func TestDecodeVariableLenString(t *testing.T) {
 	}
 	if n != 8 {
 		t.Errorf("Expected 8, got %d", n)
+	}
+}
+
+func TestDecodeDate(t *testing.T) {
+	var date time.Time
+
+	const (
+		Start = "Start"
+	)
+
+	machine := Machine{
+		InitialState: Start,
+		States: map[string][]Transition{
+			Start: []Transition{ // Mon Jan 2 15:04:05 -0700 MST 2006
+				{StringDate("02/01/06 15:04:05", &date), ""},
+			},
+		},
+	}
+
+	machine.Logger = logger
+
+	n, err := machine.Parse([]byte("09/05/21 13:57:30"))
+	if err != nil {
+		t.Error(err)
+	}
+	expect := time.Date(2021, 5, 9, 13, 57, 30, 0, time.Local)
+	if date.Equal(expect) {
+		t.Errorf("Expected %s, got '%s'", expect.String(), date.String())
+	}
+	if n != 17 {
+		t.Errorf("Expected 17, got %d", n)
 	}
 }
