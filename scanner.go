@@ -36,30 +36,23 @@ func (p *Scanner) Next() bool {
 	b := make([]byte, 128)
 	state := p.state
 	for {
-		n, err := p.reader.Read(b)
-		if err != nil {
-			p.Err = err
-			return false
-		}
-		if n > 0 {
-			p.buf = append(p.buf, b[:n]...)
+		if len(p.buf) > 0 {
 			counter := 0
 		RunState:
 			counter++
 			if counter > 50000 {
-				err = &Error{
+				p.Err = &Error{
 					State:           state,
 					TransitionIndex: -1,
 					Err:             ErrInfiniteLoop,
 				}
-				p.Err = ErrInfiniteLoop
 				return false
 			}
 
 			p.machine.Logger.Printf("trying state '%s'", state)
 
 			if len(p.s) == 0 {
-				err = &Error{
+				p.Err = &Error{
 					State:           state,
 					TransitionIndex: -1,
 					Err:             fmt.Errorf("state '%s' has no transitions!", state),
@@ -67,10 +60,9 @@ func (p *Scanner) Next() bool {
 				return false
 			}
 
-			var n int
 			// Try each transition test, and if fails move onto next
 			for i, t := range p.s {
-				n, err = t.Test(p.buf)
+				n, err := t.Test(p.buf)
 				if err != nil {
 					p.machine.Logger.Printf(" - transition %d error: %s", i, err)
 					continue // next transition
@@ -93,5 +85,11 @@ func (p *Scanner) Next() bool {
 				return false
 			}
 		}
+		n, err := p.reader.Read(b)
+		if err != nil {
+			p.Err = err
+			return false
+		}
+		p.buf = append(p.buf, b[:n]...)
 	}
 }
