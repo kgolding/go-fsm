@@ -186,7 +186,7 @@ func TestDecodeDate(t *testing.T) {
 		InitialState: Start,
 		States: map[string][]Transition{
 			Start: []Transition{ // Mon Jan 2 15:04:05 -0700 MST 2006
-				{StringDate("02/01/06 15:04:05", &date), ""},
+				{DateString("02/01/06 15:04:05", &date), ""},
 			},
 		},
 	}
