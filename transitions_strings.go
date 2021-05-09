@@ -27,7 +27,7 @@ func StringDelimited(delimiter byte, s *string) TransitionTest {
 			*s = string(b[:p])
 			return p + 1, nil
 		}
-		return 0, fmt.Errorf("no delimted %X in data", delimiter)
+		return 0, fmt.Errorf("no delimiter %X in data", delimiter)
 	}
 }
 

@@ -79,10 +79,10 @@ RunState:
 	for i, t := range s {
 		n, err = t.Test(b[pos:])
 		if err != nil {
-			m.Logger.Printf(" - test %d error: %s", i, err)
+			m.Logger.Printf(" - transition %d error: %s", i, err)
 			continue
 		}
-		m.Logger.Printf(" - test %d used %d bytes", i, n)
+		m.Logger.Printf(" - transition %d used %d bytes", i, n)
 		pos += n
 		if t.State == "" {
 			m.Logger.Printf(" - SUCCESS: used %d bytes", pos)
