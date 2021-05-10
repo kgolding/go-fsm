@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func Test_Parser(t *testing.T) {
+func Test_Scanner(t *testing.T) {
 	var text string
 	const (
 		Start = "Start"
@@ -27,7 +27,7 @@ func Test_Parser(t *testing.T) {
 	}
 	machine.Logger = logger
 
-	// Mock an io.Reader with slow data being received, test sending 1, 2, 4, 8 ... bytes at a time
+	// Mock an io.Reader with slow data being received, test sending 1, 2, 4, 8 ... 256 bytes at a time
 	for batchLen := 1; batchLen < 256; batchLen *= 2 {
 		count := 50
 		r, w := io.Pipe()
@@ -46,6 +46,7 @@ func Test_Parser(t *testing.T) {
 			w.Close()
 		}()
 
+		// p := machine.NewScanner(r, OptOnErrorSkipByte(1))
 		p := machine.NewScanner(r)
 
 		mcount := 0
@@ -59,6 +60,86 @@ func Test_Parser(t *testing.T) {
 		}
 		if p.Err != io.EOF {
 			t.Error(p.Err)
+		}
+		if mcount != count {
+			t.Errorf("expected %d got %d matches", count, mcount)
+		}
+	}
+}
+
+func Test_ScannerBadData(t *testing.T) {
+	var text string
+	var length uint
+	var date time.Time
+
+	const (
+		Start = "Start"
+		Len   = "Len"
+		Text  = "Text"
+		Date  = "Date"
+	)
+	machine := Machine{
+		InitialState: Start,
+		States: map[string][]Transition{
+			Start: []Transition{
+				{STX(), Len},
+			},
+			Len: []Transition{
+				{Uint(&length, 1), Text},
+			},
+			Text: []Transition{
+				{StringFixedLen(&length, &text), Date},
+			},
+			Date: []Transition{
+				{DateString("02/01/06", &date), ""},
+			},
+		},
+	}
+	machine.Logger = logger
+
+	// Mock an io.Reader with slow data being received, test sending 1, 2, 4, 8 ... 256 bytes at a time
+	for batchLen := 1; batchLen < 256; batchLen *= 2 {
+		r, w := io.Pipe()
+		hello := []byte{0x2, 0x05, 'H', 'e', 'l', 'l', 'o', '0', '1', '/', '1', '2', '/', '2', '1'} // 15 bytes
+		b := bytes.Repeat(hello, 2)
+		b = append(b, []byte{0xff, 0xff, 0xff}...) // Bad bytes between good data
+		b = append(b, bytes.Repeat(hello, 2)...)
+		// Bad date
+		b = append(b, []byte{0x2, 0x05, 'H', 'e', 'l', 'l', 'o', '0', '1', '/', '1', '2', '/', 'X', '1'}...)
+		b = append(b, []byte{0xff, 0xff, 0xff}...) // Bad bytes between good data
+		b = append(b, bytes.Repeat(hello, 2)...)
+		count := 6
+		go func() {
+			for len(b) > 0 {
+				l := batchLen
+				if len(b) < l {
+					l = len(b)
+				}
+				w.Write(b[:l])
+				b = b[l:]
+				time.Sleep(time.Millisecond * 2)
+			}
+			w.Close()
+		}()
+
+		p := machine.NewScanner(r, OptOnErrorSkipByte(1))
+		// p := machine.NewScanner(r)
+
+		mcount := 0
+		for p.Next() {
+			if text != "Hello" {
+				t.Errorf("expected 'Hello' got '%s'", text)
+			}
+			if length != 5 {
+				t.Errorf("expect 5 got %d", length)
+			}
+			mcount++
+			// t.Log("MATCH", mcount, text)
+			text = ""
+			length = 0
+		}
+		if p.Err != io.EOF {
+			t.Errorf("unexpected error: %s", p.Err)
 		}
 		if mcount != count {
 			t.Errorf("expected %d got %d matches", count, mcount)

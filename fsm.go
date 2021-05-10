@@ -20,18 +20,9 @@ type Transition struct {
 
 type TransitionTest func([]byte) (int, error)
 
-type Error struct {
-	State           string
-	TransitionIndex int
-	Err             error
-}
-
-func (e *Error) Error() string {
-	return e.Err.Error()
-}
-
 var ErrNoInitalState = errors.New("no inital state defined")
 var ErrInfiniteLoop = errors.New("infinite loop detected")
+var ErrNoTransitions = errors.New("no transitions")
 
 func (m *Machine) Parse(b []byte) (pos int, err error) {
 	if m.Logger == nil {
@@ -54,24 +45,14 @@ func (m *Machine) Parse(b []byte) (pos int, err error) {
 
 RunState:
 	counter++
-	if counter > 50000 {
-		err = &Error{
-			State:           state,
-			TransitionIndex: -1,
-			Err:             ErrInfiniteLoop,
-		}
-		return 0, ErrInfiniteLoop
+	if counter > 500 {
+		return 0, fmt.Errorf("'%s': %w", state, ErrInfiniteLoop)
 	}
 
 	m.Logger.Printf("entered state '%s' at position %d", state, pos)
 
 	if len(s) == 0 {
-		err = &Error{
-			State:           state,
-			TransitionIndex: -1,
-			Err:             fmt.Errorf("state '%s' has no transitions!", state),
-		}
-		return
+		return 0, fmt.Errorf("'%s': %w", state, ErrNoTransitions)
 	}
 
 	var n int
