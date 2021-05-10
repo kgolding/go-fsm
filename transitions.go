@@ -45,7 +45,7 @@ func Bytes(match []byte) TransitionTest {
 		if bytes.Compare(b[:len(match)], match) == 0 {
 			return len(match), nil
 		}
-		return 0, fmt.Errorf("looking for 0x%X got 0x%X", match, b[0])
+		return 0, fmt.Errorf("looking for % X got % X", match, b[:len(match)])
 	}
 }
 
