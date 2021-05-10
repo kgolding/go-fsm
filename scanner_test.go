@@ -13,9 +13,9 @@ func Test_Scanner(t *testing.T) {
 		Start = "Start"
 		Text  = "Text"
 	)
-	machine := Machine{
-		InitialState: Start,
-		States: map[string][]Transition{
+	machine := New(
+		Start,
+		map[string][]Transition{
 			Start: []Transition{
 				{STX(), Text},
 				{Skip(1), Start},
@@ -24,8 +24,8 @@ func Test_Scanner(t *testing.T) {
 				{StringNullTerminated(&text), ""},
 			},
 		},
-	}
-	machine.Logger = logger
+		// OptLogger(logger),
+	)
 
 	// Mock an io.Reader with slow data being received, test sending 1, 2, 4, 8 ... 256 bytes at a time
 	for batchLen := 1; batchLen < 256; batchLen *= 2 {
@@ -78,9 +78,9 @@ func Test_ScannerBadData(t *testing.T) {
 		Text  = "Text"
 		Date  = "Date"
 	)
-	machine := Machine{
-		InitialState: Start,
-		States: map[string][]Transition{
+	machine := New(
+		Start,
+		map[string][]Transition{
 			Start: []Transition{
 				{STX(), Len},
 			},
@@ -94,8 +94,9 @@ func Test_ScannerBadData(t *testing.T) {
 				{DateString("02/01/06", &date), ""},
 			},
 		},
-	}
-	machine.Logger = logger
+		OptOnErrorSkipByte(1),
+		// OptLogger(logger),
+	)
 
 	// Mock an io.Reader with slow data being received, test sending 1, 2, 4, 8 ... 256 bytes at a time
 	for batchLen := 1; batchLen < 256; batchLen *= 2 {
@@ -122,8 +123,7 @@ func Test_ScannerBadData(t *testing.T) {
 			w.Close()
 		}()
 
-		p := machine.NewScanner(r, OptOnErrorSkipByte(1))
-		// p := machine.NewScanner(r)
+		p := machine.NewScanner(r)
 
 		mcount := 0
 		for p.Next() {

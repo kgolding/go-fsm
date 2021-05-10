@@ -10,10 +10,6 @@ import (
 
 var logger = log.New(os.Stdout, "FSM ", log.Lmsgprefix)
 
-func init() {
-	logger = nil // Comment this out to enable logging
-}
-
 func TestDecodeSimple(t *testing.T) {
 	var text string
 
@@ -22,9 +18,9 @@ func TestDecodeSimple(t *testing.T) {
 		Text  = "Text"
 	)
 
-	machine := Machine{
-		InitialState: Start,
-		States: map[string][]Transition{
+	machine := New(
+		Start,
+		map[string][]Transition{
 			Start: []Transition{
 				{STX(), Text},
 				{Skip(1), Start},
@@ -33,9 +29,8 @@ func TestDecodeSimple(t *testing.T) {
 				{StringNullTerminated(&text), ""},
 			},
 		},
-	}
-
-	machine.Logger = logger
+		// OptLogger(logger),
+	)
 
 	n, err := machine.Parse([]byte{0x2, 'H', 'e', 'l', 'l', 'o', 0x0})
 	if err != nil {
@@ -58,9 +53,9 @@ func TestDecodeSimple2(t *testing.T) {
 		Text        = "Text"
 	)
 
-	machine := Machine{
-		InitialState: Start,
-		States: map[string][]Transition{
+	machine := New(
+		Start,
+		map[string][]Transition{
 			Start: []Transition{
 				{STX(), OneTwoThree},
 				{Skip(1), Start},
@@ -72,9 +67,8 @@ func TestDecodeSimple2(t *testing.T) {
 				{StringNullTerminated(&text), ""},
 			},
 		},
-	}
-
-	machine.Logger = logger
+		// OptLogger(logger),
+	)
 
 	n, err := machine.Parse([]byte{0x2, 0x1, 0x2, 0x3, 'H', 'e', 'l', 'l', 'o', 0x0})
 	if err != nil {
@@ -98,9 +92,9 @@ func TestDecode1(t *testing.T) {
 		Text  = "Text"
 	)
 
-	machine := Machine{
-		InitialState: Start,
-		States: map[string][]Transition{
+	machine := New(
+		Start,
+		map[string][]Transition{
 			Start: []Transition{
 				{Byte(0x0A), Date},
 				{Skip(1), Start},
@@ -112,9 +106,8 @@ func TestDecode1(t *testing.T) {
 				{StringNullTerminated(&text), ""},
 			},
 		},
-	}
-
-	machine.Logger = logger
+		// OptLogger(logger),
+	)
 
 	n, err := machine.Parse(append([]byte("X\n08/05/2021 Hello!"), 0x00))
 	if err != nil {
@@ -145,9 +138,9 @@ func TestDecodeVariableLenString(t *testing.T) {
 		Text    = "Text"
 	)
 
-	machine := Machine{
-		InitialState: Start,
-		States: map[string][]Transition{
+	machine := New(
+		Start,
+		map[string][]Transition{
 			Start: []Transition{
 				{STX(), TextLen},
 				{Skip(1), Start},
@@ -159,9 +152,8 @@ func TestDecodeVariableLenString(t *testing.T) {
 				{StringFixedLen(&textLen, &text), ""},
 			},
 		},
-	}
-
-	machine.Logger = logger
+		// OptLogger(logger),
+	)
 
 	n, err := machine.Parse([]byte{0x2, 0x0, 0x5, 'H', 'e', 'l', 'l', 'o'})
 	if err != nil {
@@ -182,16 +174,15 @@ func TestDecodeDate(t *testing.T) {
 		Start = "Start"
 	)
 
-	machine := Machine{
-		InitialState: Start,
-		States: map[string][]Transition{
+	machine := New(
+		Start,
+		map[string][]Transition{
 			Start: []Transition{ // Mon Jan 2 15:04:05 -0700 MST 2006
 				{DateString("02/01/06 15:04:05", &date), ""},
 			},
 		},
-	}
-
-	machine.Logger = logger
+		// OptLogger(logger),
+	)
 
 	n, err := machine.Parse([]byte("09/05/21 13:57:30"))
 	if err != nil {

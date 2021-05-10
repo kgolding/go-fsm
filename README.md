@@ -16,12 +16,11 @@ const (
 	Text  = "Text"
 )
 
-machine := Machine{
+machine := NewMachine(
 	// You must define the initial state of the machine
-	InitialState: Start,
-	
+	Start,
 	// Here we define the states, and their transistions
-	States: map[string][]Transition{
+	map[string][]Transition{
 		Start: []Transition{
 			{STX(), Text},
 			{Skip(1), Start},
@@ -29,13 +28,14 @@ machine := Machine{
 		Text: []Transition{
 			{StringNullTerminated(&text), ""},
 		},
-	},
+	)
 }
 
 // Now we run the machine on some raw data
 n, err := machine.Parse([]byte{0x2, 'H', 'e', 'l', 'l', 'o', 0x0})
+
 // n will be set to the number of bytes used, and if err == nil then the data
-// was successfully parsed
+// was successfully parsed and `text` will be set
 ```
 
 Example usage on a io.Reader `r`:
@@ -46,9 +46,9 @@ const (
 	Start = "Start"
 	Text  = "Text"
 )
-machine := Machine{
-	InitialState: Start,
-	States: map[string][]Transition{
+machine := NewMachine(
+	Start,
+	map[string][]Transition{
 		Start: []Transition{
 			{STX(), Text},
 			{Skip(1), Start},
@@ -56,7 +56,7 @@ machine := Machine{
 		Text: []Transition{
 			{StringNullTerminated(&text), ""},
 		},
-	},
+	)
 }
 
 // r is the io.Reader

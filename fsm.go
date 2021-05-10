@@ -8,9 +8,11 @@ import (
 )
 
 type Machine struct {
-	InitialState string
-	States       map[string][]Transition
-	Logger       *log.Logger
+	initialState      string
+	States            map[string][]Transition
+	logger            *log.Logger
+	onErrorSkipBytes  int
+	infiniteLoopCount int
 }
 
 type Transition struct {
@@ -20,21 +22,58 @@ type Transition struct {
 
 type TransitionTest func([]byte) (int, error)
 
+type Option func(m *Machine)
+
+func OptOnErrorSkipByte(v int) Option {
+	return func(m *Machine) {
+		m.onErrorSkipBytes = v
+	}
+}
+
+func OptInfiniteLoopCount(v int) Option {
+	return func(m *Machine) {
+		m.infiniteLoopCount = v
+	}
+}
+
+func OptLogger(logger *log.Logger) Option {
+	return func(m *Machine) {
+		m.logger = logger
+	}
+}
+
 var ErrNoInitalState = errors.New("no inital state defined")
 var ErrInfiniteLoop = errors.New("infinite loop detected")
 var ErrNoTransitions = errors.New("no transitions")
 
+func New(initalState string, states map[string][]Transition, options ...Option) *Machine {
+	m := &Machine{
+		initialState:      initalState,
+		States:            states,
+		onErrorSkipBytes:  0,
+		infiniteLoopCount: 5000,
+	}
+	for _, opt := range options {
+		opt(m)
+	}
+	return m
+}
+
 func (m *Machine) Parse(b []byte) (pos int, err error) {
-	if m.Logger == nil {
-		m.Logger = log.New(ioutil.Discard, "", 0)
+	if m.logger == nil {
+		m.logger = log.New(ioutil.Discard, "", 0)
 	}
 	defer func() {
 		if err != nil {
-			m.Logger.Println(err.Error())
+			m.logger.Println(err.Error())
 		}
 	}()
 
-	state := m.InitialState
+	if m.infiniteLoopCount == 0 {
+		m.infiniteLoopCount = 50000
+	}
+
+	state := m.initialState
 	s, ok := m.States[state]
 	if !ok {
 		err = ErrNoInitalState
@@ -45,11 +84,11 @@ func (m *Machine) Parse(b []byte) (pos int, err error) {
 
 RunState:
 	counter++
-	if counter > 500 {
+	if counter > m.infiniteLoopCount {
 		return 0, fmt.Errorf("'%s': %w", state, ErrInfiniteLoop)
 	}
 
-	m.Logger.Printf("entered state '%s' at position %d", state, pos)
+	m.logger.Printf("entered state '%s' at position %d", state, pos)
 
 	if len(s) == 0 {
 		return 0, fmt.Errorf("'%s': %w", state, ErrNoTransitions)
@@ -60,13 +99,13 @@ RunState:
 	for i, t := range s {
 		n, err = t.Test(b[pos:])
 		if err != nil {
-			m.Logger.Printf(" - transition %d error: %s", i, err)
+			m.logger.Printf(" - transition %d error: %s", i, err)
 			continue
 		}
-		m.Logger.Printf(" - transition %d used %d bytes", i, n)
+		m.logger.Printf(" - transition %d used %d bytes", i, n)
 		pos += n
 		if t.State == "" {
-			m.Logger.Printf(" - SUCCESS: used %d bytes", pos)
+			m.logger.Printf(" - SUCCESS: used %d bytes", pos)
 			return // Success
 		}
 		// fmt.Println("Transition ", n, len(b))
