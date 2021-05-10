@@ -48,7 +48,7 @@ func (s *Scanner) Next() bool {
 		if len(s.buf) > 0 {
 		RunState:
 			counter++
-			if counter > s.machine.infiniteLoopCount {
+			if s.machine.onErrorSkipBytes == 0 && counter > s.machine.infiniteLoopCount {
 				s.Err = fmt.Errorf("'%s': %w", state, ErrInfiniteLoop)
 				return false
 			}

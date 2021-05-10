@@ -84,7 +84,7 @@ func (m *Machine) Parse(b []byte) (pos int, err error) {
 
 RunState:
 	counter++
-	if counter > m.infiniteLoopCount {
+	if m.onErrorSkipBytes == 0 && counter > m.infiniteLoopCount {
 		return 0, fmt.Errorf("'%s': %w", state, ErrInfiniteLoop)
 	}
 
