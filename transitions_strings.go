@@ -23,11 +23,26 @@ func StringFixedLen(length *uint, s *string) TransitionTest {
 func StringDelimited(delimiter byte, s *string) TransitionTest {
 	return func(b []byte) (int, error) {
 		p := bytes.IndexByte(b, delimiter)
-		if p > -1 {
-			*s = string(b[:p])
-			return p + 1, nil
+		if p == -1 {
+			return 0, io.EOF
 		}
-		return 0, fmt.Errorf("no delimiter %X in data", delimiter)
+		*s = string(b[:p])
+		return p + 1, nil
+	}
+}
+
+// StringDelimited reads a string up to the given delimiter
+func StringDelimitedMaxLen(delimiter byte, maxLen int, s *string) TransitionTest {
+	return func(b []byte) (int, error) {
+		p := bytes.IndexByte(b, delimiter)
+		if p == -1 {
+			if len(b) < maxLen {
+				return 0, io.EOF
+			}
+			return 0, fmt.Errorf("no delimiter %X in data", delimiter)
+		}
+		*s = string(b[:p])
+		return p + 1, nil
 	}
 }
 
